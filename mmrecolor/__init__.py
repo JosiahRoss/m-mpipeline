@@ -1,3 +1,3 @@
-"""M&M candy recolor pipeline (P0: still images, classical segmentation)."""
+"""M&M candy recolor pipeline: still images, classical or SAM 2.1 segmentation."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"

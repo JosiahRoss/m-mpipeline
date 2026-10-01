@@ -4,13 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mmrecolor"
-version = "0.1.0"
+version = "0.2.0"
 description = "Recolor M&M candies in a shot to match a dropped color reference"
 requires-python = ">=3.10"
 dependencies = ["numpy", "opencv-python-headless", "pillow", "scikit-image"]
 
 [project.optional-dependencies]
 dev = ["pytest"]
+# SAM 2.1 via HF transformers. For CPU-only torch:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+sam = ["torch", "torchvision", "transformers>=4.56"]
 
 [project.scripts]
 mmrecolor = "mmrecolor.cli:main"

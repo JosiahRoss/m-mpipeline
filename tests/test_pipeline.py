@@ -92,7 +92,7 @@ def test_pick_and_exclude(scene):
                             exclude=[(180, 120, 50, 50)])
     a = alphas["red"] >= 0.5
     assert a[50, 40] and not a[140, 200]
-    assert report["mappings"][0]["mask_source"] == "pick"
+    assert report["mappings"][0]["mask_source"] == "classical+pick"
 
 
 def test_palette_ignores_neutral_paper():

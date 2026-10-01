@@ -27,33 +27,46 @@ confirm before rendering if more than one candy color is in play or the
 request is ambiguous about which candies change.
 
 ## 3. Find the candies
+Use SAM (`--segmenter sam`) whenever `python3 -c "import transformers, torch"`
+works; fall back to classical otherwise (step 3b).
+
 - `mmrecolor detect shot.png --colors red black --overlay out/detect.png`
   lists blobs per color with centers. Open the overlay.
-- Choose a `--pick NAME=x,y` on a clearly visible, typical candy of each
-  source color (a center from `detect` that you've confirmed is a candy, not
-  the biggest blob, which is often packaging). Picks adapt to the shot's grade.
-- Add `--exclude x,y,w,h` boxes for false hits (bag art, mascot, hands).
-  Packaging is out of scope unless the user says otherwise.
+- `--pick NAME=x,y`: a clearly visible, typical, unoccluded candy of each
+  source color (a `detect` center you've confirmed is a candy; the biggest
+  blob is often packaging). With SAM the pick also sets the reference candy
+  size, so don't pick a tiny or half-hidden one.
+- `--protect x,y,w,h`: a box around packaging (bag, box, wrapper art with
+  candy icons or mascots). Packaging is out of scope unless the user says
+  otherwise. Box the whole object generously; SAM traces it inside the box.
+
+### 3b. Classical fallback
+No `--protect`; use `--exclude x,y,w,h` boxes for every false hit (bag,
+mascot, hands in red light). Expect more manual boxes.
 
 ## 4. Render and check
 ```
 mmrecolor recolor shot.png --map red=#1E8FD6 --pick red=628,967 \
-  --exclude 1310,540,690,560 -o out/shot_blue.png --debug
+  --segmenter sam --protect 1310,545,650,545 -o out/shot_blue.png --debug
 ```
 Writes `out/shot_blue.png`, `_masks.png`, `_compare.png`, `_report.json`.
-Exit code 2 means a mapping missed the ΔE tolerance (default 3.0).
+Exit code 2 means a mapping missed the ΔE tolerance (default 3.0). SAM on CPU
+takes ~1-2 min per 2K frame; run it in the background if needed.
 
-Then look at `_compare.png` and `_masks.png` yourself and check for:
-- candies left in the old color (missed, or a rim of old color around edges)
-- non-candy areas recolored (hands, cookie rims, pumpkin, bag)
-- flat-looking candies (lost shading / highlights)
+Then review, yourself:
+1. `_compare.png` and `_masks.png`: old-color candies left, non-candy areas
+   recolored, flat-looking candies.
+2. Every entry in the report's `missed` list: crop the output around each
+   (x, y) and decide. Hands, skin, packaging are correct to leave. A real
+   candy left behind is a miss.
+3. With SAM, `sam.rejected` reasons explain misses: `size` (pick was
+   atypical, re-pick), `not convex`/`elongated` (odd candy shape), `color
+   share`/`no solid candy color` (heavy shadow or blur).
 
-Fix with another `--exclude`, a better `--pick`, or `--max-area` (raise it
-if a pile of touching candies was dropped), and re-run. Cap at ~4 rounds;
-if classical segmentation can't separate something (e.g. skin in red light
-touching red candies), say so and suggest a mask from SAM or a paint tool via
-`--mask red=mask.png`.
+Fix and re-run: a better `--pick`, another `--protect`/`--exclude`, or for a
+stubborn region a hand mask via `--mask red=mask.png`. Cap at ~4 rounds.
 
 ## 5. Report
 Give the user the output path(s), the ΔE per mapping from the report, and an
-honest list of what still isn't right.
+honest list of what still isn't right (e.g. old-color outlines on
+motion-blurred candies, small baked-in fragments).

@@ -3,8 +3,8 @@
 P0 ships a classical, CPU-only segmenter: classify pixels by OKLab hue/chroma
 against known candy colors, clean up with morphology, filter blobs by size.
 It will also catch same-colored non-candy things (a pumpkin, a mascot), so use
---exclude boxes or supply masks from SAM / a paint tool via --mask. The P1+
-plan replaces this with SAM 2/3 behind the same `segment()` signature.
+--exclude boxes, supply masks via --mask, or use the SAM segmenter (sam.py),
+which reuses these color rules only to propose prompts and gate pixels.
 """
 
 from dataclasses import dataclass

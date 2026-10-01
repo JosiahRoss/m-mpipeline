@@ -1,4 +1,4 @@
-"""Command line: `mmrecolor palette` and `mmrecolor recolor`."""
+"""Command line: `mmrecolor palette`, `detect` and `recolor`."""
 
 import argparse
 import json
@@ -80,8 +80,20 @@ def cmd_recolor(args):
     masks = dict(args.mask or [])
     picks = dict(args.pick or [])
 
+    predictor = None
+    if args.segmenter == "sam":
+        try:
+            from .sam import Sam2Predictor
+            predictor = Sam2Predictor(args.sam_model, device=args.device)
+        except ImportError as e:
+            raise SystemExit(f"SAM needs extra deps: pip install -e '.[sam]' ({e})")
+    protect = args.protect or []
+    if protect and args.segmenter != "sam":
+        raise SystemExit("--protect needs --segmenter sam (use --exclude boxes otherwise)")
     out, alphas, report = run(image, mapping, masks=masks, picks=picks, exclude=args.exclude or [],
-                              max_area_frac=args.max_area, tolerance=args.tolerance)
+                              protect=protect,
+                              max_area_frac=args.max_area, tolerance=args.tolerance,
+                              segmenter=args.segmenter, predictor=predictor, rounds=args.rounds)
     report["image"] = args.image
     report["ref_colors"] = ref_colors
 
@@ -126,8 +138,15 @@ def main(argv=None):
     pr.add_argument("--pick", type=_point, action="append",
                     help="SOURCE=x,y pixel on one candy of that color; adapts to the shot's grade")
     pr.add_argument("--exclude", type=_box, action="append", help="x,y,w,h box to ignore (repeatable)")
+    pr.add_argument("--protect", type=_box, action="append", metavar="x,y,w,h",
+                    help="box around an object to leave untouched, e.g. the bag; SAM fits "
+                         "the object's real outline inside it (SAM only)")
     pr.add_argument("--max-area", type=float, default=0.02,
                     help="drop blobs larger than this fraction of the frame")
+    pr.add_argument("--segmenter", choices=["classical", "sam"], default="classical")
+    pr.add_argument("--sam-model", default="facebook/sam2.1-hiera-small")
+    pr.add_argument("--device", default="cpu", help="cpu, cuda or mps (SAM only)")
+    pr.add_argument("--rounds", type=int, default=3, help="SAM re-prompt rounds for missed candies")
     pr.add_argument("--tolerance", type=float, default=3.0, help="max CIEDE2000 to pass")
     pr.add_argument("-o", "--out", required=True)
     pr.add_argument("--debug", action="store_true", help="also write _masks.png and _compare.png")
