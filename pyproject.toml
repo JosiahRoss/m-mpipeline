@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mmrecolor"
+version = "0.1.0"
+description = "Recolor M&M candies in a shot to match a dropped color reference"
+requires-python = ">=3.10"
+dependencies = ["numpy", "opencv-python-headless", "pillow", "scikit-image"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+mmrecolor = "mmrecolor.cli:main"
+
+[tool.setuptools]
+packages = ["mmrecolor"]
